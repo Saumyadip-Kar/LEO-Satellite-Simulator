@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Temporary Line in Three.js</title>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Set up the scene, camera, and renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Create two points
+    const pointGeometry = new THREE.SphereGeometry(0.1, 32, 32);
+    const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const point1 = new THREE.Mesh(pointGeometry, pointMaterial);
+    const point2 = new THREE.Mesh(pointGeometry, pointMaterial);
+    scene.add(point1);
+    scene.add(point2);
+
+    // Set the initial positions of the points
+    point1.position.set(-1, 0, 0);
+    point2.position.set(1, 0, 0);
+
+    // Set the camera position
+    camera.position.z = 5;
+
+    // Function to create a line between the points
+    function createTemporaryLine() {
+      const material = new THREE.LineBasicMaterial({ color: 0x0000ff });
+      const points = [];
+      points.push(point1.position.clone());
+      points.push(point2.position.clone());
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const line = new THREE.Line(geometry, material);
+      scene.add(line);
+
+      // Remove the line after 5 seconds
+      setTimeout(() => {
+        scene.remove(line);
+        geometry.dispose();
+        material.dispose();
+      }, 5000);
+    }
+
+    // Update the positions of the points and create the line every second
+    setInterval(() => {
+      // Update the positions of the points (example: moving them in a circular path)
+      const time = Date.now() * 0.001;
+      point1.position.x = Math.sin(time);
+      point1.position.y = Math.cos(time);
+      point2.position.x = Math.sin(time + Math.PI);
+      point2.position.y = Math.cos(time + Math.PI);
+
+      // Create a temporary line
+      createTemporaryLine();
+    }, 1000);
+
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
