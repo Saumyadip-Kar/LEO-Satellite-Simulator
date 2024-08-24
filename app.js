@@ -3,6 +3,7 @@ import { OrbitControls } from 'jsm/controls/OrbitControls.js';
 import { TextGeometry } from 'jsm/geometries/TextGeometry.js';
 import { FontLoader } from 'jsm/loaders/FontLoader.js';
 import { DecalGeometry } from "jsm/geometries/DecalGeometry.js";
+import * as TableUtils from "./tableutils.js"
 
 
 // Parameters
@@ -199,13 +200,13 @@ var tle2 ={
 
 
 //The object must have meshGroup variable in it
-function loadName(obj, name, fontSize = 0.08){
+function loadName(obj, name, fontSize = 0.08, textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })){
     const fontLoader = new FontLoader();
         fontLoader.load('https://cdn.jsdelivr.net/npm/three/examples/fonts/helvetiker_regular.typeface.json', function (font) {
         const textGeometry = new TextGeometry(name,{
             font: font, size: fontSize, depth: 0, curveSegments: 12, 
             bevelEnabled: false, bevelThickness: 0, bevelSize: 0,  bevelOffset: 0,  bevelSegments: 0});
-        const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
         textMesh.position.set(0.08, 0.08, 0.5); // Position the text
         obj.meshGroup.add(textMesh);
@@ -447,7 +448,9 @@ let clock = new THREE.Clock();
 function animate() {
     requestAnimationFrame(animate);
     animateSatellite();
-    updateGSproperties()
+    updateGSproperties();
+    updateRegionproperties();
+
 
     updateDateTime();
     
@@ -460,7 +463,10 @@ function animate() {
 
     // Render the left panel (3D view)
     leftPanelRenderer.render(leftPanelScene, leftPanelCamera);
-    if(currentMode == "simulation") trackCommunication();
+    if(currentMode == "simulation"){ 
+        trackCommunication();
+        trackCollection();
+    }
 }
 
 
@@ -495,8 +501,7 @@ console.log(earth.geometry.index); //Triangular Positions
 const canvas = document.getElementById('drawingCanvas');
 const context = canvas.getContext('2d');
 const updateAreaButton = document.getElementById('applyCanvas');
-const clearAreaButton = document.getElementById('clearCanvasArea');
-const tessellateButton = document.getElementById('tessellateButton');
+
 let drawing = false;
 let currentPolygon = [];
 let polygons = [];
@@ -562,61 +567,13 @@ function drawPolygon(polygon) {
 }
 
 
-    // Save the canvas as an image
-updateAreaButton.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.href = canvas.toDataURL('image/png');
-    //link.download = 'new_mask.png';
-    //link.click(); //For downloading the image
-
-
-    // Create a new image object
-    const image = new Image();
-    image.src = link.href;
-
-    image.onload = function() {
-        // Create a Three.js texture using the image
-        
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.needsUpdate = true;
-
-        // Create a material with the texture
-        const maskMat = new THREE.MeshBasicMaterial({
-            map: texture,
-            blending: THREE.AdditiveBlending
-        });
-
-        const mask1 = new THREE.Mesh(earthGeometry, maskMat);
-        mask1.scale.setScalar(1.001);
-        areaMask.removeFromParent();
-        areaMask = mask1;
-        earthObjects.add(areaMask);
-    }
-});
-
-
-clearAreaButton.addEventListener('click', () => {
-    //Cleared at right mouse click
-    //clearCanvas();
-});
-
-
-    // Helper function to clear the context
-function clearCanvas() {
-    if(polygons.length>0){
-    polygons.splice(0,polygons.length);
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = 'rgba(0, 0, 0, 0)';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    }
-}
 
 
 //For tessellation
 
 const ctx = canvas.getContext('2d');
 // Array to store center points of the subregions
-let centerPoints = [];
+var centerPoints = [];
 
 // Function to draw grid
 function drawGrid(ctx, width, height, gridSize) {
@@ -763,17 +720,74 @@ function drawPointsInPolygon(ctx, vertices, gridSize) {
 document.getElementById("subdivide").addEventListener("click",()=>{
     drawGrid(ctx, canvas.width, canvas.height, 20);
 
+    centerPoints.splice(0,centerPoints.length);
+
     for(let p=0; p<polygons.length; p++){
         let vertices = [];
         for(let i=0; i<polygons[p].length; i++) vertices.push([polygons[p][i].x, polygons[p][i].y]);
         drawPointsInPolygon(ctx, vertices, 50);
-         
+        
      }
 });
 
 
 
 
+
+
+    // Save the canvas as an image
+updateAreaButton.addEventListener('click', () => {
+    updateArea();
+});
+
+function updateArea(){
+    console.log(subRegions);
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    //link.download = 'new_mask.png';
+    //link.click(); //For downloading the image
+
+    
+    // Create a new image object
+    const image = new Image();
+    image.src = link.href;
+
+    image.onload = function() {
+        // Create a Three.js texture using the image
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+
+        // Create a material with the texture
+        let maskMat = new THREE.MeshBasicMaterial({
+            map: texture,
+            blending: THREE.AdditiveBlending
+        });
+
+        const mask1 = new THREE.Mesh(earthGeometry, maskMat);
+        mask1.scale.setScalar(1.001);
+        areaMask.removeFromParent();
+        areaMask = mask1;
+        earthObjects.add(areaMask);
+    }
+    if(centerPoints.length>0) {
+        deleteSubregions();
+        createSubRegions();
+    }
+    //else if(centerPoints.length==0 && subRegions.length>0) deleteSubregions();
+}
+
+
+    // Helper function to clear the context
+function clearCanvas() {
+    if(polygons.length>0){
+    polygons.splice(0,polygons.length);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = 'rgba(0, 0, 0, 0)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    }
+}
+    
 
 
 
@@ -787,9 +801,14 @@ document.getElementById("clearCanvasArea").addEventListener("click",()=>{
     if(drawing==true){
         addLog("The last polygon is not drawn, press Right Mouse Button on the final vertex to complete it");
         return;
-    } 
+    }
     clearCanvas();
-    addLog("⛔ Areas Deleted");
+    areaMask.removeFromParent();
+    centerPoints.splice(0,centerPoints.length);
+    deleteSubregions();
+    
+    
+    addLog("⛔ Area Deleted");
 });
 
 
@@ -797,13 +816,51 @@ document.getElementById("clearCanvasArea").addEventListener("click",()=>{
 
 
 
+class SubRegion{
+    constructor(Name, Position = {x:0,y:0,z:0})
+    {
+       this.name = Name;
+       this.meshGroup = new THREE.Group();
+       this.meshGroup.position.set(Position.x, Position.y, Position.z);
+    }
+    
+    showMeshGroup(){
+        loadName(this, this.name);
+        earthObjects.add(this.meshGroup);
+    }
+
+    removeMeshGroup(){
+        //earthObjects.remove(this.meshGroup);
+        this.meshGroup.removeFromParent();
+    }
+}
+
+var subRegions = [];
+
+function add_area(R){
+    R.showMeshGroup();
+    subRegions.push(R);
+}
+
+//To create subregions from center points
+function createSubRegions(){
+    for(let i=0; i<centerPoints.length; i++){
+        let lat_long =  pointToLatLng(centerPoints[i][0],centerPoints[i][1],canvas.offsetWidth,canvas.offsetHeight);
+        let location3D = latLongTo3DPoint(lat_long.latitude, lat_long.longitude, earthRadius);
+        let R = new SubRegion("A-"+(i+1), location3D);
+        add_area(R);
+    }
+}
+
+function deleteSubregions(){
+    for(let i=0; i<subRegions.length; i++) subRegions[i].removeMeshGroup();
+    subRegions.splice(0,subRegions.length);
+}
 
 
-
-
-
-
-
+function updateRegionproperties(){
+    for(let i=0; i<subRegions.length; i++) subRegions[i].meshGroup.lookAt(leftPanelCamera.position);
+}
 
 
 /*
@@ -823,6 +880,10 @@ updateGroundStations.addEventListener('click', () => {
         canvas.style.cursor = "default";
     }
 });
+
+
+
+
 
 
 
@@ -974,6 +1035,8 @@ function updateGSproperties(){
 }
 
 
+
+
 //Testing
 
 for (let i = 1; i <= 20; i++) {
@@ -1057,6 +1120,37 @@ function trackCommunication(){
     }
 }
 
+
+var collection_opportunities = [];
+function trackCollection(){
+    for(let i=0; i<subRegions.length; i++){
+        for(let j=0; j<Constellation.length; j++){
+            let satPos = Constellation[j].meshGroup.position;
+            let rPos = subRegions[i].meshGroup.position;
+            
+            const d = Math.sqrt(Math.pow(satPos.x-rPos.x,2)+Math.pow(satPos.y-rPos.y,2)+Math.pow(satPos.z-rPos.z,2));
+
+            if(d<comDist * (earthRadius / 6371)){
+                
+                const com = {time: now.toISOString(), sat: Constellation[j].name, subRegion: subRegions[i].name};
+                let len = collection_opportunities.length;
+                if(len == 0){
+                    collection_opportunities.push(com);
+                    addLog("Collection Opportunity: \nTime: " + com.time + " \nSubregion: " + subRegions[i].name + " \nSatellite: "+ Constellation[j].name);
+                } 
+                else{
+                    let com2 = collection_opportunities[len-1];
+                    if(com2.sat != com.sat || com2.subRegion != com.subRegion){
+                        collection_opportunities.push(com);
+                        addLog("Collection Opportunity: \nTime: " + com.time + " \nSubregion: " + subRegions[i].name + " \nSatellite: "+ Constellation[j].name);
+                    } 
+                }
+            }
+        }
+    }
+}
+
+
 document.getElementById("communication-range").addEventListener("input",(event)=>{
     comDist = event.target.value;
     document.getElementById("communication-range-label").textContent = comDist + " KM";
@@ -1072,20 +1166,59 @@ simulationButtom.addEventListener("click",(event)=>{
         extraElevation = 0;
         simulationButtom.textContent = "Stop Simulation"
         extra_elevation_input.disabled = true;
-        addLog("Simulation Started", "#a3ffe5");
+        addLog("Simulation Started at " + now, "#a3ffe5");
     }
     else{
         currentMode="dafault";
         simulationButtom.textContent = "Start Simulation"
         extra_elevation_input.disabled = false;
         extraElevation = extra_elevation_input.value / 100;
+        addLog("Simulation Completed at " + now, "#a3ffe5");
+
+        var button1 = document.createElement('button');
+        button1.type = "button";
+        button1.textContent = 'Export as CSV';
+        button1.onclick = function() {
+            TableUtils.exportTableToCSV(com_table, "communication_opportunities.csv")
+        };
+
+        var button2 = document.createElement('button');
+        button2.type = "button";
+        button2.textContent = 'Export as CSV';
+        button2.onclick = function() {
+            if(collection_opportunities.length==0) addLog("Already exported the table");
+            else TableUtils.exportTableToCSV(col_table, "collection_opportunities.csv")
+        };
+
+        var com_table;
+        var col_table;
+        if(communication_opportunities.length!=0){
+            com_table = createTable(communication_opportunities);
+            addLog("The table for communication opportunities is given", "#F8F9F9");
+            addLog("", "#D1F2EB", com_table);
+            com_table.appendChild(button1);
+        }
         
-        var table = createTable(communication_opportunities);
-        console.log(table);
-        addLog("Simulation Completed", "#a3ffe5");
-        addLog("The table for communication opportunities is given", "#F8F9F9");
-        addLog("", "#D1F2EB", table);
+        if(collection_opportunities.length!=0){
+            col_table = createTable(collection_opportunities);
+            addLog("The table for collection opportunities is given", "#F8F9F9");
+            addLog("", "#b5e0b1", col_table);
+            col_table.appendChild(button2);
+        }
+        //TableUtils.exportTableToCSV(col_table, "collection_opportunities.csv")
+
+        var button2 = document.createElement('button');
+        button2.type = "button";
+        button2.textContent = 'Export as Spreadsheet';
+        button2.onclick = function() {
+            if(collection_opportunities.length==0) addLog("Already exported the table");
+            else TableUtils.exportTableToCSV(col_table, "collection_opportunities.csv");
+        };
+
+        //const tables = document.querySelectorAll('table');
+        TableUtils.exportTablesToCSV([com_table, col_table], 'tables.csv');
         communication_opportunities.splice(0,communication_opportunities.length);
+        collection_opportunities.splice(0,collection_opportunities.length);
         //Alternative way to empty the array
         //while(communication_opportunities.length>0)communication_opportunities.pop();
     }
