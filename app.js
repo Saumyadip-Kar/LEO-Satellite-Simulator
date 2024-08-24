@@ -1179,15 +1179,16 @@ simulationButtom.addEventListener("click",(event)=>{
         button1.type = "button";
         button1.textContent = 'Export as CSV';
         button1.onclick = function() {
-            TableUtils.exportTableToCSV(com_table, "communication_opportunities.csv")
+            addLog("Need to log atleast one collection opprtunity and atleast one communication opportunity")
+            //TableUtils.exportTablesToCSV(com_table, "communication_opportunities.csv")
         };
 
         var button2 = document.createElement('button');
         button2.type = "button";
         button2.textContent = 'Export as CSV';
         button2.onclick = function() {
-            if(collection_opportunities.length==0) addLog("Already exported the table");
-            else TableUtils.exportTableToCSV(col_table, "collection_opportunities.csv")
+            addLog("Need to log atleast one collection opprtunity and atleast one communication opportunity")
+            //TableUtils.exportTablesToCSV(col_table, "collection_opportunities.csv")
         };
 
         var com_table;
@@ -1207,13 +1208,6 @@ simulationButtom.addEventListener("click",(event)=>{
         }
         //TableUtils.exportTableToCSV(col_table, "collection_opportunities.csv")
 
-        var button2 = document.createElement('button');
-        button2.type = "button";
-        button2.textContent = 'Export as Spreadsheet';
-        button2.onclick = function() {
-            if(collection_opportunities.length==0) addLog("Already exported the table");
-            else TableUtils.exportTableToCSV(col_table, "collection_opportunities.csv");
-        };
 
         //const tables = document.querySelectorAll('table');
         TableUtils.exportTablesToCSV([com_table, col_table], 'tables.csv');
