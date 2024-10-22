@@ -6,7 +6,7 @@ body {
     overflow: hidden;
 }
 #controls-panel {
-    height: 10%; /* Adjust height to 30% */
+    height: 8%; /* Adjust height to 30% */
     background-color: #f0f0f0;
     display: flex;
     justify-content: center;
@@ -149,6 +149,36 @@ body {
 }
 
 
+#satDB {
+    background: rgb(175, 255, 198);
+    border: none;
+    font-size: 30px;
+    cursor: pointer;
+}
+
+#satDB:hover{
+    background-color: #48ff15;
+}
+
+#satDB:active{
+    background-color: darkorange;
+}
+
+
+#viewResults{
+    background-color: aquamarine;
+    border-color: blue;
+}
+
+#viewResults:hover{
+    background-color: #48ff15;
+    border-color: green;
+}
+
+#viewResults:active{
+    background-color: darkorange;
+    border-color: red;
+}
 
 
 
@@ -161,7 +191,7 @@ body {
 
     margin-bottom: 50px;
     height: 200px; /*I will later make it 100%-40px*/
-    width: 18%;
+    width: 20%;
     background-color: rgba(8, 193, 255, 0.81); /* Transparent black */
     color: rgb(3, 22, 9);
     padding: 10px;
@@ -189,7 +219,7 @@ body {
 
 
 #GroundStationsList.visible {
-    transform: translateY(-20%);
+    transform: translateY(-25%);
 }
 
 
@@ -228,10 +258,44 @@ body {
 }
 
 #satelliteList.visible {
-    transform: translateY(-20%);
+    transform: translateY(-25%);
 }
 
 
+
+
+#satelliteDB {
+
+    margin-bottom: 50px;
+    height: 200px; /*I will later make it 100%-40px*/
+    width: 20%;
+    background-color: rgba(255, 185, 8, 0.808); /* Transparent black */
+    color: rgb(3, 22, 9);
+    padding: 10px;
+    box-sizing: border-box;
+    transition: transform 0.3s ease;
+    transform: translateY(100%);
+    overflow-y: auto;
+    border-radius: 0.4cm;
+}
+
+#satelliteDB::-webkit-scrollbar {
+    width: 0;  /*Using to Remove scrollbar*/
+    height: 10px;
+    /*background: rgba(2, 252, 94, 0.193);  Optional: Make background of scrollbar transparent */
+}
+#satelliteDB::-webkit-scrollbar-horizontal {
+    height: 10px;
+}
+
+#satelliteDB::-webkit-scrollbar-thumb:horizontal {
+    background-color: rgba(255, 48, 2, 0.5); /* Color of the thumb */
+    border-radius: 10px; /* Round corners of the thumb */
+}
+
+#satelliteDB.visible {
+    transform: translateY(-25%);
+}
 
 
 
@@ -239,11 +303,11 @@ body {
     top: 30px;
     overflow-y: auto;
     border: 2px solid #ff0000;
-    height: 250px;
+    height: 240px;
 }
 
 #outputList::-webkit-scrollbar {
-    width: 0;  /*Using to Remove scrollbar*/
+    width: 10px;  /*Using to Remove scrollbar*/
     height: 10px;
     /*background: rgba(2, 252, 94, 0.193);  Optional: Make background of scrollbar transparent */
 }
@@ -251,7 +315,16 @@ body {
     height: 10px;
 }
 
-#outputList::-webkit-scrollbar-thumb:horizontal {
-    background-color: rgba(33, 239, 6, 0.853); /* Color of the thumb */
+#outputList::-webkit-scrollbar-thumb {
+    background-color: rgba(10, 255, 157, 0.599); /* Color of the thumb */
     border-radius: 10px; /* Round corners of the thumb */
+}
+
+#outputList li {
+    display: block;         /* Makes li elements take the full width */
+    white-space: nowrap;    /* Prevents text from wrapping */
+    width: 98%;           /* Ensures full width is used */
+    margin: 0;             /* Removes default margins */
+    padding: 10px;         /* Adds some padding for aesthetics (optional) */
+    box-sizing: border-box; /* Includes padding and border in the element's total width */
 }

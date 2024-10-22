@@ -33,6 +33,11 @@ document.getElementById('updateSat').addEventListener('click', function() {
     }
 });
 
+document.getElementById('satDB').addEventListener('click', function() {
+    var groundStationsList = document.getElementById('satelliteDB');
+    groundStationsList.classList.toggle('visible');
+});
+
 
 const clearLogs = document.getElementById("clearLogs");
 const outputList = document.getElementById("outputList");

@@ -78,9 +78,10 @@
             <div id="canvasContainer">
             <canvas id="drawingCanvas"></canvas>
             </div>
+            <button id="canvasNewTab">Open in new Tab</button>
 
             <div id="outputContainer">
-       
+
                     <label>Output:</label>
                     <button id="clearLogs">Clear</button>
                 <br>
@@ -102,9 +103,7 @@
         <button id="updateSat" title="Update Satellite">🛰️</button>
         <div id="satelliteList" class="hidden">
                 <ul style="list-style-type: none; margin: 0; padding: 0;">
-                    <ul style="list-style-type: none; margin: 0; padding: 0;" id="satList">
-                        <!--Ground Station Controls are Added here-->
-                    </ul>
+                    <ul style="list-style-type: none; margin: 0; padding: 0;" id="satList"></ul>
                     <li><input type="text" placeholder="name" id="sat-name" style="width: 15%;">
                         <label for="line1" style="color: azure;">TLE:</label>
                         <input type="text" placeholder="line1" id="tle-l1" style="width: 25%;"> 
@@ -114,9 +113,16 @@
                 </ul> 
         </div>
         
-        <button id="applyCanvas">Update Area</button>
-        <button id="clearCanvasArea">Clear Area</button>
-        <button id="subdivide">Tessellate</button>
+        <button id="satDB" title="Satellite Database">DB</button>
+        <div id="satelliteDB" class="hidden">
+            <ul style="list-style-type: none; margin: 0; padding: 0;">
+                <ul style="list-style-type: none; margin: 0; padding: 0;" id="satListControl"></ul>
+            </ul> 
+        </div>
+
+        <button id="applyCanvas" style="background: none; border: none; font-size: 30px; cursor: pointer;" title="Update Area">🏴󠁳󠁬󠁷󠁿</button>
+        <button id="clearCanvasArea" style="background: none; border: none; font-size: 30px; cursor: pointer;" title="Clear Area">⌫</button>
+        <button id="subdivide" style="background: none; border: none; font-size: 30px; cursor: pointer;" title="Tesselate">T</button>
 
         <button id="updateGroundStations" title="Update Ground Station">📡</button>
         <div id="GroundStationsList" class="hidden">
@@ -132,13 +138,15 @@
                 </ul> 
         </div>
         
+        <button id="viewResults" title="View Results"> View Results </button>
+
     </div>
    
     <script src="https://unpkg.com/tle.js"></script>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
-
+    
 
     <script type="importmap">
         {

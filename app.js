@@ -8,6 +8,7 @@ import * as TableUtils from "./tableutils.js"
 
 // Parameters
 var surfaceImagePath = "./Texture/ColorMap.jpg"; // Provide a valid image path, I'm using an equilateral / spherical projection of earth
+var WorldMap = "./Texture/ColorMap.jpg"
 var rotationSpeed = 500;
 var rotationSmootheningFactor = 0.000001; 
 var zoomSmootheningFactor = 0.001
@@ -75,7 +76,6 @@ const earthObjects = new THREE.Group();
 leftPanelScene.add(earthObjects);
 
 const earthGeometry = new THREE.SphereGeometry(earthRadius, earthDetail, earthDetail);
-const earthMaterial1 = new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load(surfaceImagePath) });
 
 const loader = new THREE.TextureLoader();
 const earthMaterial  = new THREE.MeshPhongMaterial({
@@ -181,225 +181,6 @@ function toRadians(angle) {
 
 
 
-
-
-
-//Defining a constellation of satellites
-
-//Sample TLE, I will add these dynamically with APIs
-
-var tle1 ={
-    tleLine1: '1 25544U 98067A   19156.50900463  .00003075  00000-0  59442-4 0  9992',
-    tleLine2: '2 25544  51.6433  59.2583 0008217  16.4489 347.6017 15.51174618173442'
-};
-
-var tle2 ={
-    tleLine1: '1 20580U 90037B   20288.75272396  .00001330  00000-0  63117-4 0  9993',
-    tleLine2: '2 20580  28.4698 138.6703 0002656  16.4153  94.1190 15.09187213 55689'
-};
-
-
-//The object must have meshGroup variable in it
-function loadName(obj, name, fontSize = 0.08, textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })){
-    const fontLoader = new FontLoader();
-        fontLoader.load('https://cdn.jsdelivr.net/npm/three/examples/fonts/helvetiker_regular.typeface.json', function (font) {
-        const textGeometry = new TextGeometry(name,{
-            font: font, size: fontSize, depth: 0, curveSegments: 12, 
-            bevelEnabled: false, bevelThickness: 0, bevelSize: 0,  bevelOffset: 0,  bevelSegments: 0});
-
-        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-        textMesh.position.set(0.08, 0.08, 0.5); // Position the text
-        obj.meshGroup.add(textMesh);
-    });
-}
-
-class LEO_Satellite{
-    constructor(Name, TLE, Geometry = new THREE.BoxGeometry(.1, .1, .1), 
-    Material = new THREE.MeshBasicMaterial({ color: 0xff0000 }))
-    {
-       this.name = Name;
-       this.tleLine1 = TLE.tleLine1;
-       this.tleLine2 = TLE.tleLine2; 
-       this.mesh = new THREE.Mesh(Geometry, Material);
-       this.meshGroup = new THREE.Group();
-       this.meshGroup.add(this.mesh);
-    }
-    
-    showMeshGroup(){
-        loadName(this, this.name);
-        earthObjects.add(this.meshGroup);
-    }
-
-    removeMeshGroup(){
-        earthObjects.remove(this.meshGroup);
-    }
-}
-
-
-
-//This is the complete data base of satellites
-
-let satDataBase = [];
-
-
-async function fetchData() {
-    try {
-       const response = await fetch('./celestrak_TLE_dataset.txt');
-        const data = await response.text();
-        let lines = data.split('\n');
-        for (let i = 0; i < lines.length; i += 3)
-            if (lines[i] && lines[i+1] && lines[i+2]) {
-                 satDataBase.push(new LEO_Satellite(lines[i].trim(), { tleLine1:lines[i+1].trim(), tleLine2: lines[i+2].trim()}));
-        }
-    } catch (error) {
-        console.error('Failed to fetch TLE data:', error);
-        return []; // Return an empty array to handle the errord
-    }
-}
-
-
-//Call the async function to fetch data (waits until data is fetched and satDataBase is updated)
-fetchData().then(lines => {
-    console.log(satDataBase); 
-    for(let i=0; i<satDataBase.length; i++) addNewSat(satDataBase[i].name, satDataBase[i].tleLine1, satDataBase[i].tleLine2);
-});
-
-console.log(satDataBase); //This won't work as the data is not fetched as soon as page is loaded
-
-
-// This is the current constellations
-
-const Constellation = [
-    //new LEO_Satellite("International Space Station", tle1),
-    // new LEO_Satellite("Hubble Space Telescope", tle2),
-    // new LEO_Satellite("NOAA 18", 
-    //     {tleLine1: '1 28654U 05018A   20288.60832954  .00000161  00000-0  16979-4 0  9993',
-    //     tleLine2: '2 28654  99.0976 101.7418 0012723  67.7765  38.7687 14.12446202680457'}),
-    // new LEO_Satellite("COSMOS 2251 DEB", 
-    //     {tleLine1: '1 35681U 93036A   20288.85227486  .00001352  00000-0  33291-3 0  9991',
-    //     tleLine2: '2 35681  74.0438 187.9372 0022104  75.4643  48.6752 14.63062619670829'})
-];
-
-function add_to_orbit(sat){
-    const index = Constellation.findIndex(_sat => _sat.name === sat.name);
-    if(index == -1){
-        sat.showMeshGroup();
-        Constellation.push(sat);
-        return true;
-    }
-    else{
-        addLog("A satellite with the same name already exists");
-        GS.removeFromParent();
-        return false; //In case satellite with the same name already exits
-    }
-    
-}
-
-function remove_from_orbit(name){
-    const index = Constellation.findIndex(_sat => _sat.name === name);
-    if(index != -1){  
-        Constellation[index].removeMeshGroup();
-        Constellation.splice(index, 1);
-        return true;
-    }
-    return false; //In case satellite with the same name doesn't exist
-}
-
-function addNewSat(name, tle_line1, tle_line2){
-    let added = add_to_orbit(new LEO_Satellite(name, {tleLine1: tle_line1, tleLine2: tle_line2}));
-    if(added = false){
-        return; //Already a Satellite Exist with the same name
-    } 
-
-    var li = document.createElement('li');
-    var label = document.createElement('label');
-    label.style.fontSize = "16px";
-    label.textContent = String(name);
-
-    var button = document.createElement('button');
-    button.textContent = 'Remove';
-    button.style.float = "right";
-    button.style.padding = "0";
-    button.onclick = function() {
-        let removed = remove_from_orbit(name);
-        if(removed == false){
-            return;//No GS with that name exist, it should never happen by my logic, still using it for debugging purpose if needed
-        }
-        li.remove();  // Remove the li element when the button is clicked
-    };
-
-    // Append label and button to the li element
-    li.appendChild(label);
-    li.appendChild(button);
-
-    // Append the li element to the ul list
-    var satList= document.getElementById('satList');
-    satList.appendChild(li);
-}
-
-document.getElementById('add-sat').addEventListener("click",()=>{
-    let name = document.getElementById("sat-name").value;
-    let tleL1 = document.getElementById("tle-l1").value;
-    let tleL2 = document.getElementById("tle-l2").value;
-    addNewSat(name, tleL1, tleL2);
-});
-
-// add_to_orbit(new LEO_Satellite("International Space Station", tle1));
-
-// add_to_orbit(new LEO_Satellite("Hubble Space Telescope", tle2));
-
-// add_to_orbit(new LEO_Satellite("NOAA 18", 
-//     {tleLine1: '1 28654U 05018A   20288.60832954  .00000161  00000-0  16979-4 0  9993',
-//     tleLine2: '2 28654  99.0976 101.7418 0012723  67.7765  38.7687 14.12446202680457'}));
-
-// add_to_orbit(new LEO_Satellite("COSMOS 2251 DEB", 
-//     {tleLine1: '1 35681U 93036A   20288.85227486  .00001352  00000-0  33291-3 0  9991',
-//     tleLine2: '2 35681  74.0438 187.9372 0022104  75.4643  48.6752 14.63062619670829'}));
-
-
-
-console.log(Constellation);
-
-
-
-
-// Function to update satellite position
-function animateSatellite() {
-    // Calculate satellite position using TLE data
-    for(let i=0; i<Constellation.length; i++){
-        var sat = Constellation[i];
-        var tleLine1 = sat.tleLine1, tleLine2 = sat.tleLine2;
-        let satrec = satellite.twoline2satrec(tleLine1, tleLine2);
-        let positionAndVelocity = satellite.propagate(satrec, now);
-        let positionEci = positionAndVelocity.position;
-
-        if (positionEci) {
-            let gmst = satellite.gstime(now);
-            let positionGd = satellite.eciToGeodetic(positionEci, gmst);
-            let latitude = satellite.degreesLat(positionGd.latitude);
-            let longitude = satellite.degreesLong(positionGd.longitude);
-            let altitude = positionGd.height;
-
-            let height = extraElevation + earthRadius + altitude / 6371; // Earth radius is approximately 6371 km
-
-            let position = latLongTo3DPoint(latitude,longitude,height)
-
-            sat.meshGroup.position.x = position.x;
-            sat.meshGroup.position.y = position.y;
-            sat.meshGroup.position.z = position.z;
-
-            sat.meshGroup.lookAt(leftPanelCamera.position);
-        }
-    }
-}
-
-
-
-
-
-
-
-
 //Controls
 
 document.getElementById('rotation-speed').addEventListener('input', function(event) {
@@ -494,12 +275,34 @@ document.getElementById("simulation-speed").addEventListener("input", (event) =>
 const colors = [];
 
 // Generate random colors for each face
-console.log(earth.geometry.attributes.position.array); //Vertex Positions
-console.log(earth.geometry.index); //Triangular Positions
+// console.log(earth.geometry.attributes.position.array); //Vertex Positions
+// console.log(earth.geometry.index); //Triangular Positions
 
 
-const canvas = document.getElementById('drawingCanvas');
-const context = canvas.getContext('2d');
+//var newWindow = window.open();
+//newWindow.document.write('<div id="canvasContainer"> <canvas id="drawingCanvas"></canvas></div>');
+//newWindow.document.title = "World Map";
+
+
+const canvasNewTab = document.getElementById("canvasNewTab")
+canvasNewTab.addEventListener("click",(event)=>{
+    // newWindow = window.open();
+
+    // // Get the data URL of the canvas
+    // const dataUrl = canvas.toDataURL();
+
+    // // Set the content of the new window
+    // newWindow.document.write('<div id="canvasContainer"> <canvas id="drawingCanvas"></canvas></div>');
+    // newWindow.document.title = "World Map";
+    // canvas = newWindow.document.getElementById('drawingCanvas');
+    // context = canvas.getContext('2d');
+
+    // // Optionally, you can pass a reference to the original canvas
+    // //newWindow.originalCanvas = canvas;
+});
+
+var canvas = document.getElementById('drawingCanvas');
+var context = canvas.getContext('2d');
 const updateAreaButton = document.getElementById('applyCanvas');
 
 let drawing = false;
@@ -892,6 +695,320 @@ updateGroundStations.addEventListener('click', () => {
 
 
 
+//Defining a constellation of satellites
+
+//Sample TLE, I will add these dynamically with APIs
+
+var tle1 ={
+    tleLine1: '1 25544U 98067A   19156.50900463  .00003075  00000-0  59442-4 0  9992',
+    tleLine2: '2 25544  51.6433  59.2583 0008217  16.4489 347.6017 15.51174618173442'
+};
+
+var tle2 ={
+    tleLine1: '1 20580U 90037B   20288.75272396  .00001330  00000-0  63117-4 0  9993',
+    tleLine2: '2 20580  28.4698 138.6703 0002656  16.4153  94.1190 15.09187213 55689'
+};
+
+
+//The object must have meshGroup variable in it
+function loadName(obj, name, fontSize = 0.08, textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff })){
+    const fontLoader = new FontLoader();
+        fontLoader.load('https://cdn.jsdelivr.net/npm/three/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+        const textGeometry = new TextGeometry(name,{
+            font: font, size: fontSize, depth: 0, curveSegments: 12, 
+            bevelEnabled: false, bevelThickness: 0, bevelSize: 0,  bevelOffset: 0,  bevelSegments: 0});
+
+        const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+        textMesh.position.set(0.08, 0.08, 0.5); // Position the text
+        obj.meshGroup.add(textMesh);
+    });
+}
+
+class LEO_Satellite{
+    constructor(Name, TLE, Geometry = new THREE.BoxGeometry(.1, .1, .1), 
+    Material = new THREE.MeshBasicMaterial({ color: 0xff0000 }))
+    {
+       this.name = Name;
+       this.tleLine1 = TLE.tleLine1;
+       this.tleLine2 = TLE.tleLine2; 
+       this.mesh = new THREE.Mesh(Geometry, Material);
+       this.meshGroup = new THREE.Group();
+       this.meshGroup.add(this.mesh);
+    }
+    
+    showMeshGroup(){
+        loadName(this, this.name);
+        earthObjects.add(this.meshGroup);
+    }
+
+    removeMeshGroup(){
+        earthObjects.remove(this.meshGroup);
+    }
+}
+
+
+
+//This is the complete data base of satellites
+
+let satDataBase = [];
+let satListControl = document.getElementById("satListControl")
+
+async function fetchData() {
+    try {
+       const response = await fetch('./celestrak_TLE_dataset.txt');
+        const data = await response.text();
+        let lines = data.split('\n');
+        for (let i = 0; i < lines.length; i += 3)
+            if (lines[i] && lines[i+1] && lines[i+2]) {
+                 satDataBase.push(new LEO_Satellite(lines[i].trim(), { tleLine1:lines[i+1].trim(), tleLine2: lines[i+2].trim()}));
+        }
+    } catch (error) {
+        console.error('Failed to fetch TLE data:', error);
+        return []; // Return an empty array to handle the errord
+    }
+}
+
+
+//Call the async function to fetch data (waits until data is fetched and satDataBase is updated)
+fetchData().then(lines => {
+    let li = document.createElement('li');
+    li.style.display = 'grid';
+    let addAllButton = document.createElement('button');
+    addAllButton.textContent = 'Add All';
+    addAllButton.title = "Add all the satellites in the database to the current constellation"
+    addAllButton.style.float = "left";
+    addAllButton.style.padding = "0";
+    addAllButton.style.width = "50px";
+    addAllButton.onclick = function() {
+        for(let i=0; i<satDataBase.length; i++) addNewSat(satDataBase[i].name, satDataBase[i].tleLine1, satDataBase[i].tleLine2);
+    };
+    li.appendChild(addAllButton);
+    satListControl.appendChild(li);
+    updateSatDB();
+});
+
+function updateSatDB(){
+    for(let i=0; i<satDataBase.length; i++) {
+
+        let li = document.createElement('li');
+        li.style.display = 'grid';
+        li.style.gridTemplateColumns = '1fr 1fr 1fr 1fr 1fr auto';
+        li.style.gap = '2px';  // Add some spacing between columns
+        li.style.alignItems = 'center';  // Align vertically
+
+
+        let name = document.createElement('input');
+        name.readOnly = true;
+        name.type = "text";
+        name.style.fontSize = "12px";
+        name.value = String(satDataBase[i].name);
+
+        let labl = document.createElement('label');
+        labl.style.fontSize = "12px";
+        labl.textContent = "TLE";
+
+        let line1 = document.createElement('input');
+        line1.type = "text";
+        line1.readOnly = true;
+        line1.style.fontSize = "12px";
+        line1.value = String(satDataBase[i].tleLine1);
+
+        let line2 = document.createElement('input');
+        line2.readOnly = true;
+        line2.type = "text";
+        line2.style.fontSize = "12px";
+        line2.value = String(satDataBase[i].tleLine2);
+        
+        
+
+        let addButton = document.createElement('button');
+        addButton.textContent = 'Add';
+        addButton.title = "Add this satellite to the current constellation"
+        addButton.style.float = "right";
+        addButton.style.padding = "0";
+
+        addButton.onclick = function() {
+        addNewSat(String(name.value), String(line1.value), String(line2.value)) 
+        };
+
+        let copyButton = document.createElement('button');
+        copyButton.textContent = 'Copy';
+        copyButton.title = "Copy the values to edit and add a new satellite"
+        copyButton.style.float = "right";
+        copyButton.style.padding = "0";
+
+        copyButton.onclick = function() {
+            document.getElementById("sat-name").value = String(name.value);
+            document.getElementById("tle-l1").value = String(line1.value);
+            document.getElementById("tle-l2").value = String(line2.value);
+        };
+
+    // Append label and button to the li element
+    li.appendChild(addButton);
+    li.appendChild(copyButton);
+    li.appendChild(name);
+    li.appendChild(labl);
+    li.appendChild(line1);
+    li.appendChild(line2);
+    
+
+    satListControl.appendChild(li);
+    }
+}
+
+
+
+//console.log(satDataBase); //This won't work as the data is not fetched as soon as page is loaded
+
+
+
+// This is the current constellations
+
+const Constellation = [
+    //new LEO_Satellite("International Space Station", tle1),
+    // new LEO_Satellite("Hubble Space Telescope", tle2),
+    // new LEO_Satellite("NOAA 18", 
+    //     {tleLine1: '1 28654U 05018A   20288.60832954  .00000161  00000-0  16979-4 0  9993',
+    //     tleLine2: '2 28654  99.0976 101.7418 0012723  67.7765  38.7687 14.12446202680457'}),
+    // new LEO_Satellite("COSMOS 2251 DEB", 
+    //     {tleLine1: '1 35681U 93036A   20288.85227486  .00001352  00000-0  33291-3 0  9991',
+    //     tleLine2: '2 35681  74.0438 187.9372 0022104  75.4643  48.6752 14.63062619670829'})
+];
+
+function add_to_orbit(sat){
+    const index = Constellation.findIndex(_sat => _sat.name === sat.name);
+    if(index == -1){
+        sat.showMeshGroup();
+        Constellation.push(sat);
+        return true;
+    }
+    else{
+        addLog("A satellite with the same name already exists");
+        sat.meshGroup.removeFromParent();
+        return false; //In case satellite with the same name already exits
+    }
+    
+}
+
+function remove_from_orbit(name){
+    const index = Constellation.findIndex(_sat => _sat.name === name);
+    if(index != -1){  
+        Constellation[index].removeMeshGroup();
+        Constellation.splice(index, 1);
+        return true;
+    }
+    return false; //In case satellite with the same name doesn't exist
+}
+
+function addNewSat(name, tle_line1, tle_line2){
+    let added = add_to_orbit(new LEO_Satellite(name, {tleLine1: tle_line1, tleLine2: tle_line2}));
+    if(added == false) return; //Already a Satellite Exist with the same name
+    var li = document.createElement('li');
+    li.style.display = 'grid';
+    li.style.gridTemplateColumns = '3fr 1fr';
+    li.style.gap = '2px';  // Add some spacing between columns
+    li.style.alignItems = 'center';  // Align vertically
+    var label = document.createElement('label');
+    label.style.fontSize = "16px";
+    label.textContent = String(name);
+
+    var button = document.createElement('button');
+    button.textContent = 'Remove';
+    //button.style.float = "right";
+    button.style.padding = "0";
+    button.onclick = function() {
+        let removed = remove_from_orbit(name);
+        if(removed == false){
+            return;//No GS with that name exist, it should never happen by my logic, still using it for debugging purpose if needed
+        }
+        li.remove();  // Remove the li element when the button is clicked
+    };
+
+    // Append label and button to the li element
+    li.appendChild(label);
+    li.appendChild(button);
+
+    // Append the li element to the ul list
+    var satList= document.getElementById('satList');
+    satList.appendChild(li);
+}
+
+document.getElementById('add-sat').addEventListener("click",()=>{
+    let name = document.getElementById("sat-name").value;
+    let tleL1 = document.getElementById("tle-l1").value;
+    let tleL2 = document.getElementById("tle-l2").value;
+    addNewSat(name, tleL1, tleL2);
+});
+
+// add_to_orbit(new LEO_Satellite("International Space Station", tle1));
+
+// add_to_orbit(new LEO_Satellite("Hubble Space Telescope", tle2));
+
+// add_to_orbit(new LEO_Satellite("NOAA 18", 
+//     {tleLine1: '1 28654U 05018A   20288.60832954  .00000161  00000-0  16979-4 0  9993',
+//     tleLine2: '2 28654  99.0976 101.7418 0012723  67.7765  38.7687 14.12446202680457'}));
+
+// add_to_orbit(new LEO_Satellite("COSMOS 2251 DEB", 
+//     {tleLine1: '1 35681U 93036A   20288.85227486  .00001352  00000-0  33291-3 0  9991',
+//     tleLine2: '2 35681  74.0438 187.9372 0022104  75.4643  48.6752 14.63062619670829'}));
+
+
+
+console.log(Constellation);
+
+
+
+
+// Function to update satellite position
+function animateSatellite() {
+    // Calculate satellite position using TLE data
+    for(let i=0; i<Constellation.length; i++){
+        var sat = Constellation[i];
+        var tleLine1 = sat.tleLine1, tleLine2 = sat.tleLine2;
+        let satrec = satellite.twoline2satrec(tleLine1, tleLine2);
+        let positionAndVelocity = satellite.propagate(satrec, now);
+        let positionEci = positionAndVelocity.position;
+
+        if (positionEci) {
+            let gmst = satellite.gstime(now);
+            let positionGd = satellite.eciToGeodetic(positionEci, gmst);
+            let latitude = satellite.degreesLat(positionGd.latitude);
+            let longitude = satellite.degreesLong(positionGd.longitude);
+            let altitude = positionGd.height;
+
+            let height = extraElevation + earthRadius + altitude / 6371; // Earth radius is approximately 6371 km
+
+            let position = latLongTo3DPoint(latitude,longitude,height)
+
+            sat.meshGroup.position.x = position.x;
+            sat.meshGroup.position.y = position.y;
+            sat.meshGroup.position.z = position.z;
+
+            sat.meshGroup.lookAt(leftPanelCamera.position);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -946,20 +1063,28 @@ document.getElementById("addNewGS").addEventListener('click', () =>{
 
 function addNewGS(name, lat, long) {
 
-    let added = setupGS(new GroundStation(name, latLongTo3DPoint(lat, long)));
+    let added = setupGS(new GroundStation(name, latLongTo3DPoint(lat, long), {lat,long}));
     if(added = false){
         return; //Already a Ground Station Exist with the same name
     } 
 
     var li = document.createElement('li');
-    var label = document.createElement('label');
-    label.textContent = String(name) + ": Positions("+String(lat)+","+String(long)+")";
-    label.style.fontSize = "16px";
+    li.style.display = 'grid';
+    li.style.gridTemplateColumns = '3fr 1fr';
+    li.style.gap = '2px';  // Add some spacing between columns
+    li.style.alignItems = 'center';  // Align vertically
+
+
+    var label = document.createElement('input');
+    label.type = "text";
+    label.readOnly = true;
+    label.style.fontSize = "13px";
+    label.value = String(name) + ": Positions("+String(lat)+","+String(long)+")";
+    
+    
 
     var button = document.createElement('button');
     button.textContent = 'Remove';
-    
-    button.style.float = "right";
     button.style.padding = "0";
     button.onclick = function() {
         let removed = removeGS(name);
@@ -982,7 +1107,7 @@ function addNewGS(name, lat, long) {
 
 
 class GroundStation{
-    constructor(Name, Position = {x:0,y:0,z:0}, Geometry = new THREE.SphereGeometry(0.1, 16, 16), 
+    constructor(Name, Position = {x:0,y:0,z:0}, Position2 = {lat:0, long:0}, Geometry = new THREE.SphereGeometry(0.1, 16, 16), 
     Material = new THREE.MeshBasicMaterial({ color: 0xffff00 }))
     {
        this.name = Name;
@@ -990,6 +1115,8 @@ class GroundStation{
        this.meshGroup = new THREE.Group();
        this.meshGroup.add(this.mesh);
        this.meshGroup.position.set(Position.x, Position.y, Position.z)
+       this.latitude = Position2.lat;
+       this.longitude = Position2.long;
     }
     
     showMeshGroup(){
@@ -1071,6 +1198,7 @@ function addLog(message, background_color="Yellow", element=null) {
     button.textContent = 'Clear';
     
     button.style.float = "right";
+    button.style.alignSelf = "bottom"
     button.style.padding = "0";
     button.onclick = function() {
         li.remove();  // Remove the li element when the button is clicked
@@ -1089,6 +1217,13 @@ function addLog(message, background_color="Yellow", element=null) {
 
 
 
+//For storing simulation experiments and results
+var Experiments = [];
+var exp_index = 0;
+var curr_start_time;
+var curr_end_time;
+
+
 //Collection and Communication Opprtunities
 
 var communication_opportunities = [];
@@ -1101,18 +1236,18 @@ function trackCommunication(){
             const d = Math.sqrt(Math.pow(satPos.x-GSPos.x,2)+Math.pow(satPos.y-GSPos.y,2)+Math.pow(satPos.z-GSPos.z,2));
 
             if(d<comDist * (earthRadius / 6371)){
-                
+                //This is the time during a communication opprtunity
                 const com = {time: now.toISOString(), sat: Constellation[j].name, GS: GroundStations[i].name};
                 let len = communication_opportunities.length;
                 if(len == 0){
                     communication_opportunities.push(com);
-                    addLog("Communcation Opportunity: \nTime: " + com.time + " \nGround Station: " + GroundStations[i].name + " \nSatellite: "+ Constellation[j].name);
+                    addLog("Communication Opportunity: \nTime: " + com.time + " \nGround Station: " + GroundStations[i].name + " \nSatellite: "+ Constellation[j].name);
                 } 
                 else{
                     let com2 = communication_opportunities[len-1];
                     if(com2.sat != com.sat || com2.GS != com.GS){
                         communication_opportunities.push(com);
-                        addLog("Communcation Opportunity: \nTime: " + com.time + " \nGround Station: " + GroundStations[i].name + " \nSatellite: "+ Constellation[j].name);
+                        addLog("Communication Opportunity: \nTime: " + com.time + " \nGround Station: " + GroundStations[i].name + " \nSatellite: "+ Constellation[j].name);
                     } 
                 }
             }
@@ -1157,39 +1292,46 @@ document.getElementById("communication-range").addEventListener("input",(event)=
 });
 
 
-var simulationButtom = document.getElementById("start-simulation");
+var simulationButton = document.getElementById("start-simulation");
 var extra_elevation_input = document.getElementById("extra-elevation")
 
-simulationButtom.addEventListener("click",(event)=>{
+simulationButton.addEventListener("click",(event)=>{
     if(currentMode!="simulation"){
+        //Starting the simulation
         currentMode="simulation";
         extraElevation = 0;
-        simulationButtom.textContent = "Stop Simulation"
+        simulationButton.textContent = "Stop Simulation"
         extra_elevation_input.disabled = true;
         addLog("Simulation Started at " + now, "#a3ffe5");
+        curr_start_time = now.toString();
+        console.log(curr_start_time);
     }
     else{
+        //Stopping the simulation
         currentMode="dafault";
-        simulationButtom.textContent = "Start Simulation"
+        simulationButton.textContent = "Start Simulation"
         extra_elevation_input.disabled = false;
         extraElevation = extra_elevation_input.value / 100;
         addLog("Simulation Completed at " + now, "#a3ffe5");
+        curr_end_time = now.toString();
 
-        var button1 = document.createElement('button');
-        button1.type = "button";
-        button1.textContent = 'Export as CSV';
-        button1.onclick = function() {
-            addLog("Need to log atleast one collection opprtunity and atleast one communication opportunity")
-            //TableUtils.exportTablesToCSV(com_table, "communication_opportunities.csv")
-        };
-
-        var button2 = document.createElement('button');
-        button2.type = "button";
-        button2.textContent = 'Export as CSV';
-        button2.onclick = function() {
-            addLog("Need to log atleast one collection opprtunity and atleast one communication opportunity")
-            //TableUtils.exportTablesToCSV(col_table, "collection_opportunities.csv")
-        };
+        //Deep Clone: don't use structured clone
+        //The Arrays are passing only the references, to have to do deep copy
+        //Still need to change curr_start_time = now as now just holds a reference to the current time
+        Experiments.push({
+            index: exp_index, 
+            startT: curr_start_time, 
+            endT: curr_end_time, 
+            comList: [], 
+            colList: [], 
+            currConstellation: [], 
+            currGSList: []});
+        
+        for(let j=0; j<communication_opportunities.length; j++) Experiments[exp_index].comList.push({time: communication_opportunities[j].time, sat: communication_opportunities[j].sat, GS: communication_opportunities[j].GS})
+        for(let j=0; j<collection_opportunities.length; j++) Experiments[exp_index].colList.push({time: collection_opportunities[j].time, sat: collection_opportunities[j].sat, subRegion: collection_opportunities[j].subRegion})
+        for(let j=0; j<Constellation.length; j++) Experiments[exp_index].currConstellation.push({Sat_Name: Constellation[j].name, TLE_Line1: Constellation[j].tleLine1, TLE_Line2: Constellation[j].tleLine2})
+        for(let j=0; j<GroundStations.length; j++) Experiments[exp_index].currGSList.push({GS_Name: GroundStations[j].name, Latitude: GroundStations[j].latitude, Longitude: GroundStations[j].longitude}) 
+        exp_index+=1;
 
         var com_table;
         var col_table;
@@ -1197,20 +1339,16 @@ simulationButtom.addEventListener("click",(event)=>{
             com_table = createTable(communication_opportunities);
             addLog("The table for communication opportunities is given", "#F8F9F9");
             addLog("", "#D1F2EB", com_table);
-            com_table.appendChild(button1);
         }
         
         if(collection_opportunities.length!=0){
             col_table = createTable(collection_opportunities);
             addLog("The table for collection opportunities is given", "#F8F9F9");
             addLog("", "#b5e0b1", col_table);
-            col_table.appendChild(button2);
         }
-        //TableUtils.exportTableToCSV(col_table, "collection_opportunities.csv")
-
 
         //const tables = document.querySelectorAll('table');
-        TableUtils.exportTablesToCSV([com_table, col_table], 'tables.csv');
+        //TableUtils.exportTablesToCSV([com_table, col_table], 'tables.csv');
         communication_opportunities.splice(0,communication_opportunities.length);
         collection_opportunities.splice(0,collection_opportunities.length);
         //Alternative way to empty the array
@@ -1218,11 +1356,139 @@ simulationButtom.addEventListener("click",(event)=>{
     }
 });
 
+document.getElementById("viewResults").addEventListener("click",()=>{
+    showResult();
+});
+
+//Function to show the successive experiments and results in a new tab
+function showResult() {
+    // Create the exp_res element and generate the sat_database table
+    addLog("Compiling the results");
+    let exp_res = document.createElement("div");
+
+    const exporter_csv = document.createElement("button");
+    exporter_csv.textContent = "Export as CSV";
+    exporter_csv.id = "exporter_csv";
+    exporter_csv.style.margin = "50px";
+    exp_res.appendChild(exporter_csv);
+
+    const br = document.createElement("br"); //Tobe used anywhere
+
+
+    const exporter_xls = document.createElement("button");
+    exporter_xls.textContent = "Export as Spreadsheet";
+    exporter_xls.id = "exporter_xls";
+    exporter_csv.style.margin = "50px";
+    exp_res.appendChild(exporter_xls);
+
+
+    let label1 = document.createElement('h3');
+    label1.textContent = "Satellite Database";
+    exp_res.appendChild(label1);
+
+    let satDB_modified = [];
+    for(let i=0; i<satDataBase.length; i++) satDB_modified.push({Sat_Name: satDataBase[i].name, TLE_Line1: satDataBase[i].tleLine1, TLE_Line2: satDataBase[i].tleLine2});
+    let sat_database = createTable(satDB_modified); // Creates an HTML table and returns the table as an HTML element
+    sat_database.setAttribute('name', 'Satellite Database');
+    exp_res.appendChild(sat_database); // Append the table to the div
+
+    for(let i=0; i<exp_index; i++){
+        //Trying to create a CSV exporter
+        
+        let label2 = document.createElement('h2');
+        label2.textContent = "Experiment-"+String(i+1); 
+        exp_res.appendChild(label2);
+
+        let label2b1 = document.createElement('h4');
+        label2b1.textContent = " Start Time: " + String(Experiments[i].startT); 
+        exp_res.appendChild(label2b1);
+
+        
+
+        let label2b2 = document.createElement('h4');
+        label2b2.textContent = " End Time: " + String(Experiments[i].endT); 
+        exp_res.appendChild(label2b2);
+        
+        let label2c = document.createElement('h3');
+        label2c.textContent = "Constellation";
+        exp_res.appendChild(label2c);
+        
+
+        if(Experiments[i].currConstellation.length!=0){
+            var temp_const = createTable(Experiments[i].currConstellation);
+            temp_const.setAttribute('name', 'Exp-'+String(i+1)+' Constellation');
+            exp_res.appendChild(temp_const);
+        }
+
+        let label2d = document.createElement('h3');
+        label2d.textContent = "Ground Stations"; 
+        exp_res.appendChild(label2d);
+        
+
+        if(Experiments[i].currGSList.length!=0){
+            var temp_GSList = createTable(Experiments[i].currGSList);
+            temp_GSList.setAttribute('name', 'Exp-'+String(i+1)+' Ground Stations');
+            exp_res.appendChild(temp_GSList);
+        }
+    
+        let label3 = document.createElement('h3');
+        label3.textContent = "Collection Opportunities";
+        exp_res.appendChild(label3);
+
+        if(Experiments[i].colList.length!=0){
+            var temp_colList = createTable(Experiments[i].colList);
+            temp_colList.setAttribute('name', 'Exp-'+String(i+1)+' Collection Opportunities');
+            exp_res.appendChild(temp_colList);
+        }
+
+        let label4 = document.createElement('h3');
+        label4.textContent = "Communication Opportunities";
+        exp_res.appendChild(label4);
+
+        if(Experiments[i].comList.length!=0){
+            var temp_comList = createTable(Experiments[i].comList);
+            temp_comList.setAttribute('name', 'Exp-'+String(i+1)+' Communication Opportunities');
+            exp_res.appendChild(temp_comList);
+        }
+    }
+    
+    //exp_res = createTable(Experiments);
+    // Get the outerHTML of the exp_res element (which contains the table)
+    const exp_res_html = exp_res.outerHTML;
+
+    // Open a new window
+    const newWindow = window.open("", "_blank");
+
+    // Dynamic HTML page generation for the Experiments and the Results
+    const htmlContent = `
+    <html>
+        <head>
+            <title>Result Page</title>
+            <link rel="stylesheet" href="table_styles.css">
+        </head>
+        <body>
+            <h1>Experiments and Results</h1>
+            <div id="ExpResContainer">
+                ${exp_res_html} <!-- Insert the serialized HTML directly -->
+            </div>
+        <script src="table_utils_generaized.js"> </script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+        </body>
+    </html>
+    `;
+    
+    // Write the content to the new window
+    newWindow.document.write(htmlContent);
+    newWindow.document.close();
+}
+
+
 
 function createTable(data) {
     const table = document.createElement('table');
     const thead = document.createElement('thead');
     const tbody = document.createElement('tbody');
+    thead.style.textAlign = "left";
     table.style.width = '100%';
     table.style.borderCollapse = 'collapse';
     table.style.marginBottom = '20px';
@@ -1257,3 +1523,5 @@ function createTable(data) {
 addLog("Zoom Out the Page to 90% in case of any problem with the layout");
 
 animate();
+
+
