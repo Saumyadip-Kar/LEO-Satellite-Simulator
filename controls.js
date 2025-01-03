@@ -71,3 +71,4 @@ resizeCanvas();
 
 // Resize when window is resized
 window.addEventListener('resize', resizeCanvas);
+

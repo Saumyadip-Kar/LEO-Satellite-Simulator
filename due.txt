@@ -1,0 +1,5 @@
+Correct the problem in 1323 in app.js  --- done
+[!!!set the observer to subregion instead of groundstation (need to find a way to convert 3d position to latitute and longitude)]
+
+Instead of using a single distance as communication range using communication radius, collection radius
+

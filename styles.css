@@ -150,18 +150,18 @@ body {
 
 
 #satDB {
-    background: rgb(175, 255, 198);
+    /* background: rgb(175, 255, 198); */
     border: none;
     font-size: 30px;
     cursor: pointer;
 }
 
 #satDB:hover{
-    background-color: #48ff15;
+    /* background-color: #48ff15; */
 }
 
 #satDB:active{
-    background-color: darkorange;
+    /* background-color: darkorange; */
 }
 
 

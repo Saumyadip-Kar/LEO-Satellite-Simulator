@@ -18,14 +18,14 @@ var extraElevation = .5; // A bias defined for better simulation, increases sate
 var delta = 0
 var now = new Date();
 var areaMask = new THREE.Mesh();
-var simulationSpeed = 120;
+var simulationSpeed = document.getElementById("simulation-speed").value;
 //var modes = ["simulation", "default", "scheduling"];
 var currentMode = "default";
 var comDist = 100; //In KM Changable
 var fps = 60; //Maximum range depends on the system, I am setting it 60
 //var trackInterval = 60; //The time interval in miliseconds after which the next collection and communication opportunity wil be tracked, reducing its value will increase computation if the no of satellites, GS and subregions are more
 // The actual rotation speed would be rotationSpeed * rotationSmootheningFactor
-
+var precision = 3;
 
 
 
@@ -620,11 +620,13 @@ document.getElementById("clearCanvasArea").addEventListener("click",()=>{
 
 
 class SubRegion{
-    constructor(Name, Position = {x:0,y:0,z:0})
+    constructor(Name, Position = {x:0,y:0,z:0}, latitude, longitude)
     {
        this.name = Name;
        this.meshGroup = new THREE.Group();
-       this.meshGroup.position.set(Position.x, Position.y, Position.z);
+       this.meshGroup.position.set(Position.x, Position.y, Position.z); //For plotting the locatin in the 3D earth
+       this.latitude = latitude //Actual latitude for further use
+       this.longitude = longitude //Actual longitude for further use
     }
     
     showMeshGroup(){
@@ -650,7 +652,7 @@ function createSubRegions(){
     for(let i=0; i<centerPoints.length; i++){
         let lat_long =  pointToLatLng(centerPoints[i][0],centerPoints[i][1],canvas.offsetWidth,canvas.offsetHeight);
         let location3D = latLongTo3DPoint(lat_long.latitude, lat_long.longitude, earthRadius);
-        let R = new SubRegion("A-"+(i+1), location3D);
+        let R = new SubRegion("A-"+(i+1), location3D, lat_long.latitude, lat_long.longitude);
         add_area(R);
     }
 }
@@ -890,8 +892,13 @@ function add_to_orbit(sat){
     
 }
 
-function remove_from_orbit(name){
-    const index = Constellation.findIndex(_sat => _sat.name === name);
+function remove_from_orbit(name = null, ind=-1){
+    let index;
+    if(ind !=-1 && typeof arr[index] !== 'undefined'){ 
+        index = ind;
+    } //Remove using index (Optional use)
+
+    index = Constellation.findIndex(_sat => _sat.name === name);
     if(index != -1){  
         Constellation[index].removeMeshGroup();
         Constellation.splice(index, 1);
@@ -919,7 +926,7 @@ function addNewSat(name, tle_line1, tle_line2){
     button.onclick = function() {
         let removed = remove_from_orbit(name);
         if(removed == false){
-            return;//No GS with that name exist, it should never happen by my logic, still using it for debugging purpose if needed
+            return;//No Satellite with that name exist, it should never happen by my logic, still using it for debugging purpose if needed
         }
         li.remove();  // Remove the li element when the button is clicked
     };
@@ -940,6 +947,10 @@ document.getElementById('add-sat').addEventListener("click",()=>{
     addNewSat(name, tleL1, tleL2);
 });
 
+// document.getElementById('removeAll-sat').addEventListener("click",()=>{
+//     for(let i=0; i<Constellation.length; i++) remove_from_orbit(ind=i);
+// });
+
 // add_to_orbit(new LEO_Satellite("International Space Station", tle1));
 
 // add_to_orbit(new LEO_Satellite("Hubble Space Telescope", tle2));
@@ -957,6 +968,37 @@ document.getElementById('add-sat').addEventListener("click",()=>{
 console.log(Constellation);
 
 
+//This is a function that returns the position (latitute, longitude [in degree],  height [in kilometer]) of the satellite from the given TLE
+//Also returns the look angle if the position (lat, long in degree and height in KM) of the observer is provided
+function findSatPos(tleLine1, tleLine2, observerPosition=null){
+    var satrec = satellite.twoline2satrec(tleLine1, tleLine2);
+
+    var positionAndVelocity = satellite.propagate(satrec, now);
+
+    let positionEci = positionAndVelocity.position;
+    
+    if (positionEci){   
+        let gmst = satellite.gstime(now);
+        //console.log("GMST = ", gmst)
+        let positionGd = satellite.eciToGeodetic(positionEci, gmst);
+        let latitude = satellite.degreesLat(positionGd.latitude);
+        let longitude = satellite.degreesLong(positionGd.longitude);
+        let altitude = positionGd.height;
+        let lookAngles = null;
+        if(observerPosition !=null){
+            var observerGd = {
+                latitude: satellite.degreesToRadians(observerPosition.latitude),
+                longitude: satellite.degreesToRadians(observerPosition.longitude),
+                height: observerPosition.height
+            };
+            var positionEcf = satellite.eciToEcf(positionEci, gmst);
+            lookAngles = satellite.ecfToLookAngles(observerGd, positionEcf);
+        }
+
+        return {latitude:latitude, longitude:longitude, altitude:altitude, lookAngles:lookAngles};
+    }
+    else return null;
+}
 
 
 // Function to update satellite position
@@ -964,17 +1006,24 @@ function animateSatellite() {
     // Calculate satellite position using TLE data
     for(let i=0; i<Constellation.length; i++){
         var sat = Constellation[i];
-        var tleLine1 = sat.tleLine1, tleLine2 = sat.tleLine2;
-        let satrec = satellite.twoline2satrec(tleLine1, tleLine2);
-        let positionAndVelocity = satellite.propagate(satrec, now);
-        let positionEci = positionAndVelocity.position;
+        var tleLine1 = sat.tleLine1;
+        var tleLine2 = sat.tleLine2;
+        
+        
+        let satpos = findSatPos(tleLine1, tleLine2);
+        
+        if(satpos){
+            //console.log(satpos);
+            let latitude = satpos.latitude;
+            let longitude = satpos.longitude;
+            let altitude = satpos.altitude;
 
-        if (positionEci) {
-            let gmst = satellite.gstime(now);
-            let positionGd = satellite.eciToGeodetic(positionEci, gmst);
-            let latitude = satellite.degreesLat(positionGd.latitude);
-            let longitude = satellite.degreesLong(positionGd.longitude);
-            let altitude = positionGd.height;
+            ///.................For debugging..............
+            // if (sat.name=="ISS (ZARYA)"){
+            //     console.log("Lat, Long, height = ", latitude, " ", longitude, " ", altitude);
+            //     console.log(now)
+            // }
+            ///............................................
 
             let height = extraElevation + earthRadius + altitude / 6371; // Earth radius is approximately 6371 km
 
@@ -986,6 +1035,7 @@ function animateSatellite() {
 
             sat.meshGroup.lookAt(leftPanelCamera.position);
         }
+        else console.log("TLE of ",sat.name," is invalid. Update the TLE to the latest version."), addLog("TLE of ",sat.name," is invalid. Update the TLE to the latest version.");    
     }
 }
 
@@ -1227,7 +1277,7 @@ var curr_end_time;
 //Collection and Communication Opprtunities
 
 var communication_opportunities = [];
-function trackCommunication(){
+function trackCommunication() {
     for(let i=0; i<GroundStations.length; i++){
         for(let j=0; j<Constellation.length; j++){
             let satPos = Constellation[j].meshGroup.position;
@@ -1237,17 +1287,22 @@ function trackCommunication(){
 
             if(d<comDist * (earthRadius / 6371)){
                 //This is the time during a communication opprtunity
-                const com = {time: now.toISOString(), sat: Constellation[j].name, GS: GroundStations[i].name};
+                let satpos2 = findSatPos(Constellation[j].tleLine1, Constellation[j].tleLine2, {latitude: GroundStations[i].latitude, longitude: GroundStations[i].longitude, height: 0});
+                let lookAngles = satpos2.lookAngles;
+                let azimuth = Math.round(satellite.radiansToDegrees(lookAngles.azimuth),precision);
+                let elevation = Math.round(satellite.radiansToDegrees(lookAngles.elevation),precision);
+                const com = {time: now.toISOString(), sat: Constellation[j].name, GS: GroundStations[i].name, azimuth: azimuth, elevation: elevation};
+                
                 let len = communication_opportunities.length;
                 if(len == 0){
                     communication_opportunities.push(com);
-                    addLog("Communication Opportunity: \nTime: " + com.time + " \nGround Station: " + GroundStations[i].name + " \nSatellite: "+ Constellation[j].name);
+                    addLog("Communication Opportunity: \nTime: " + com.time + " \nGround Station: " + GroundStations[i].name + " \nSatellite: "+ Constellation[j].name  + "\nAzimuth: " + com.azimuth + "\nElevation: "+com.elevation);
                 } 
                 else{
                     let com2 = communication_opportunities[len-1];
                     if(com2.sat != com.sat || com2.GS != com.GS){
                         communication_opportunities.push(com);
-                        addLog("Communication Opportunity: \nTime: " + com.time + " \nGround Station: " + GroundStations[i].name + " \nSatellite: "+ Constellation[j].name);
+                        addLog("Communication Opportunity: \nTime: " + com.time + " \nGround Station: " + GroundStations[i].name + " \nSatellite: "+ Constellation[j].name + "\nAzimuth: " + com.azimuth + "\nElevation: "+com.elevation);
                     } 
                 }
             }
@@ -1264,20 +1319,24 @@ function trackCollection(){
             let rPos = subRegions[i].meshGroup.position;
             
             const d = Math.sqrt(Math.pow(satPos.x-rPos.x,2)+Math.pow(satPos.y-rPos.y,2)+Math.pow(satPos.z-rPos.z,2));
-
+            
             if(d<comDist * (earthRadius / 6371)){
+                let satpos2 = findSatPos(Constellation[j].tleLine1, Constellation[j].tleLine2, {latitude: subRegions[i].latitude, longitude: subRegions[i].longitude, height: 0});
+                let lookAngles = satpos2.lookAngles;
+                let azimuth = Math.round(satellite.radiansToDegrees(lookAngles.azimuth),precision);
+                let elevation = Math.round(satellite.radiansToDegrees(lookAngles.elevation),precision);
                 
-                const com = {time: now.toISOString(), sat: Constellation[j].name, subRegion: subRegions[i].name};
+                const com = {time: now.toISOString(), sat: Constellation[j].name, subRegion: subRegions[i].name, azimuth: azimuth, elevation: elevation};
                 let len = collection_opportunities.length;
                 if(len == 0){
                     collection_opportunities.push(com);
-                    addLog("Collection Opportunity: \nTime: " + com.time + " \nSubregion: " + subRegions[i].name + " \nSatellite: "+ Constellation[j].name);
+                    addLog("Collection Opportunity: \nTime: " + com.time + " \nSubregion: " + subRegions[i].name + " \nSatellite: " + Constellation[j].name +"\nAzimuth: " + com.azimuth + "\nElevation: "+com.elevation);
                 } 
                 else{
                     let com2 = collection_opportunities[len-1];
                     if(com2.sat != com.sat || com2.subRegion != com.subRegion){
                         collection_opportunities.push(com);
-                        addLog("Collection Opportunity: \nTime: " + com.time + " \nSubregion: " + subRegions[i].name + " \nSatellite: "+ Constellation[j].name);
+                        addLog("Collection Opportunity: \nTime: " + com.time + " \nSubregion: " + subRegions[i].name + " \nSatellite: " + Constellation[j].name +"\nAzimuth: " + com.azimuth + "\nElevation: "+com.elevation);
                     } 
                 }
             }
@@ -1327,12 +1386,12 @@ simulationButton.addEventListener("click",(event)=>{
             currConstellation: [], 
             currGSList: []});
         
-        for(let j=0; j<communication_opportunities.length; j++) Experiments[exp_index].comList.push({time: communication_opportunities[j].time, sat: communication_opportunities[j].sat, GS: communication_opportunities[j].GS})
-        for(let j=0; j<collection_opportunities.length; j++) Experiments[exp_index].colList.push({time: collection_opportunities[j].time, sat: collection_opportunities[j].sat, subRegion: collection_opportunities[j].subRegion})
+        for(let j=0; j<communication_opportunities.length; j++) Experiments[exp_index].comList.push({time: communication_opportunities[j].time, sat: communication_opportunities[j].sat, GS: communication_opportunities[j].GS, azimuth: communication_opportunities[j].azimuth, elevation: communication_opportunities[j].elevation})
+        for(let j=0; j<collection_opportunities.length; j++) Experiments[exp_index].colList.push({time: collection_opportunities[j].time, sat: collection_opportunities[j].sat, subRegion: collection_opportunities[j].subRegion, azimuth: collection_opportunities[j].azimuth, elevation: collection_opportunities[j].elevation})
         for(let j=0; j<Constellation.length; j++) Experiments[exp_index].currConstellation.push({Sat_Name: Constellation[j].name, TLE_Line1: Constellation[j].tleLine1, TLE_Line2: Constellation[j].tleLine2})
         for(let j=0; j<GroundStations.length; j++) Experiments[exp_index].currGSList.push({GS_Name: GroundStations[j].name, Latitude: GroundStations[j].latitude, Longitude: GroundStations[j].longitude}) 
         exp_index+=1;
-
+        
         var com_table;
         var col_table;
         if(communication_opportunities.length!=0){
