@@ -1,0 +1,64 @@
+/* Apply styles to all tables */
+table {
+    width: min-content; /* Automatically adjust width based on content */
+    max-width: 90%; /* Prevent overflow on small screens and limit maximum width */
+    border-collapse: collapse; /* Remove double borders */
+    margin: 20px auto; /* Center table and add space around */
+    font-family: Arial, sans-serif; /* Use a clean font */
+    font-size: 14px; /* Set font size */
+    table-layout: auto; /* Allow table layout to be determined by content */
+}
+
+/* Table header styles */
+table th {
+    background-color: #4CAF50; /* Header background color */
+    color: white; /* Header text color */
+    text-align: left; /* Align text to the left */
+    padding: 6px; /* Reduced padding for a more compact look */
+    border-bottom: 2px solid #ddd; /* Bottom border for header */
+}
+
+/* Table cell styles */
+table td {
+    padding: 6px; /* Reduced padding for a more compact look */
+    border-bottom: 1px solid #ddd; /* Bottom border for cells */
+}
+
+/* Add hover effect for rows */
+table tr:hover {
+    background-color: #f1f1f1; /* Change background on hover */
+}
+
+/* Add alternating row colors */
+table tr:nth-child(even) {
+    background-color: #f9f9f9; /* Light grey for even rows */
+}
+
+/* Add a border to the table */
+table {
+    border: 1px solid #ddd; /* Outer border */
+}
+
+/* Optional: Add a border to table cells */
+table td, table th {
+    border-right: 1px solid #ddd; /* Right border for cells */
+}
+
+/* Remove right border for last cell in each row */
+table tr td:last-child, table tr th:last-child {
+    border-right: none; /* No right border on last cell */
+}
+
+/* Optional: Add a subtle shadow to the table */
+table {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+/* Responsive design for tables */
+@media (max-width: 600px) {
+    table {
+        display: block; /* Make table block */
+        overflow-x: auto; /* Enable horizontal scroll */
+        white-space: nowrap; /* Prevent line breaks */
+    }
+}

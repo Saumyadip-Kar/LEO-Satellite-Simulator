@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Low Orbit Satellite Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script> -->
+
+</head>
+<body>
+    <div id="panels-container">
+        
+        <div id="left-panel">
+            <button id="toggle-button">☰</button>
+            <div id="sidebar" class="hidden">
+                <ul style="list-style-type: none; margin: 0; padding: 0;">
+                <li><label for="earth-rotation-speed">Earth Rotation Speed</label></li>
+                <li><input class="controls-range" type="range" id="rotation-speed" name="rotation-speed" min="0" max="10000" value="500"></li>
+
+                <li><label for="extra-elevation">Extra Elevation</label></li>
+                <li><input class="controls-range" type="range" id="extra-elevation" name="extra-elevation" min="0" max="150" value="50"></li>
+                
+                <li><label for="sunlight-intensity">Sunlight Intensity</label></li>
+                <li><input class="controls-range" type="range" id="sunlight-intensity" name="sunlight-intensity" min="0" max="1800" value="750"></li>            
+
+                <li>
+                <label for="show-clouds">Show Clouds</label>
+                <input type="checkbox" id="show-clouds" name="show-clouds" checked="true">
+                </li>
+
+                <li><label for="clouds-opacity">Clouds Opacity</label></li>
+                <li><input class="controls-range" type="range" id="clouds-opacity" name="clouds-opacity" min="0" max="100" value="30"></li>            
+
+                <li><label for="clouds-height">Clouds Height</label></li>
+                <li><input class="controls-range" type="range" id="clouds-height" name="clouds-height" min="0" max="60" value="10"></li>            
+
+                <li>
+                    <label for="night-lights">Night Lights</label>
+                    <input type="checkbox" id="night-lights" name="night-lights" checked="true">
+                </li>
+
+                <li>
+                    <label for="map-displacement">Map Displacement</label>
+                    <input type="checkbox" id="map-displacement" name="map-displacement" aria-checked style="cursor:pointer;"
+                    title="Enabling Map Displacement will disable Night Lights">
+                </li>
+
+                
+                <li>
+                    <label for="map-displacement-intensity">Height</label>
+                    <input class="map-displacement-intensity" type="range" id="map-displacement-intensity" name="map-displacement-intensity" min="0" max="100" value="30">
+                </li>            
+
+
+                
+
+                <li><label>Current Date Time</label></li>
+                <li><label id = "datetime" style="color:rgb(232, 253, 255);"></label></li>
+
+                <li><label for="communication-range">Communication range</label></li>
+                <li><input class="controls-range" type="range" id="communication-range" name="communication-range" min="1" max="1000" value="100">
+                <label id="communication-range-label">100 KM</label></li>
+
+                <li><label for="simulation-speed">Simulation Speed</label></li>
+                <li><input class="controls-range" type="range" id="simulation-speed" name="simulation-speed" min="1" max="1000" value="1">
+                <label id="simulation-speed-label">1x</label></li>
+
+                <li><button class="controls-buttton" id="start-simulation">Start Simulation</button></li>
+            </div>
+           
+        </div>
+
+
+        <!-- Draggable Slider -->
+        <!-- <div id="slider"></div> -->
+        
+
+        <div id="right-panel">
+            <div id="canvasContainer">
+            <canvas id="drawingCanvas"></canvas>
+            </div>
+            <button id="canvasNewTab">Open in new Tab</button>
+            <label for="grid-size">Grid Size: </label>
+            <input type="number" placeholder=20 id="grid-size" style="width: 6%;" min="5" max="100" >
+            <div id="outputContainer">
+
+                    <label>Output:</label>
+                    <button id="clearLogs">Clear</button>
+                <br>
+                <ul id="outputList" style="list-style-type: none; margin: 0; padding: 0;">
+                    
+                    <!--To add logs here-->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <div id="controls-panel">
+        <button id="saveButton" title="Save">💾</button>
+        <button id="loadButton" title="Load"><i class="bi bi-file-earmark-arrow-up"></i></button>
+        <button id="exportButton" title="Export Results"><i class="bi bi-file-earmark-arrow-down"></i></button>
+
+        <button id="updateSat" title="Update Satellite">🛰️</button>
+        <div id="satelliteList" class="hidden">
+                <ul style="list-style-type: none; margin: 0; padding: 0;">
+
+                    <ul style="list-style-type: none; margin: 0; padding: 0;" id="satList"></ul>
+                    
+                    
+                    
+                    <li><input type="text" placeholder="name" id="sat-name" style="width: 15%;">
+                        <label for="line1" style="color: azure;">TLE:</label>
+                        <input type="text" placeholder="line1" id="tle-l1" style="width: 25%;"> 
+                        <input type="text" placeholder="line2" id="tle-l2" style="width: 25%;"> 
+                        <button id="add-sat" style="width: 10%;">+</button>
+                    </li>
+                    <li> <button id="removeAll-sat">Remove All</button> </li>
+                </ul> 
+        </div>
+        
+        <button id="satDB" title="Satellite Database"><i class="bi bi-database-add" style="color: rgb(21, 0, 255);"></i></button>
+        <div id="satelliteDB" class="hidden">
+            <ul style="list-style-type: none; margin: 0; padding: 0;">
+                <ul style="list-style-type: none; margin: 0; padding: 0;" id="satListControl"></ul>
+            </ul> 
+        </div>
+
+        <button id="applyCanvas" style="background: none; border: none; font-size: 30px; cursor: pointer;" title="Update Area">🏴󠁳󠁬󠁷󠁿</button>
+        <button id="clearCanvasArea" style="background: none; border: none; font-size: 30px; cursor: pointer;" title="Clear Area"><i class="bi bi-eraser"></i></button>
+        <button id="subdivide" style="background: none; border: none; font-size: 30px; cursor: pointer;" title="Tesselate"><i class="bi bi-grid-3x3"></i></button>
+
+        <button id="updateGroundStations" title="Update Ground Station">📡</button>
+        <div id="GroundStationsList" class="hidden">
+                <ul style="list-style-type: none; margin: 0; padding: 0;">
+                    <ul style="list-style-type: none; margin: 0; padding: 0;" id="GSList">
+                        <!--Ground Station Controls are Added here-->
+                    </ul>
+                    <li><input type="text" placeholder="name" id="GSName" style="width: 15%;">
+                        <input type="number" placeholder="latitude" id="GSlat" style="width: 29%;" max="90" min="-90"> 
+                        <input type="number" placeholder="longitude" id="GSlong" style="width: 29%;" max="180" min="-180"> 
+                        <button id="addNewGS" style="width: 10%;">+</button>
+                    </li>
+                    <li><button id="removeAll-GS">Remove All</button></li>
+                </ul> 
+        </div>
+        
+        <button id="viewResults" title="View Results"> View Results </button>
+
+    </div>
+   
+    <!-- <script src="https://unpkg.com/tle.js"></script> -->
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+
+    
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three":   "https://cdn.jsdelivr.net/npm/three/+esm",
+                "jsm/": "https://cdn.jsdelivr.net/npm/three/examples/jsm/"
+            }
+        }
+    </script>
+<!-- 
+<script src="/node_modules/d3/dist/d3.min.js"></script>
+    
+    <script src="/node_modules/tle.js/dist/tle.min.js"></script>
+    <script src="/node_modules/satellite.js/dist/satellite.min.js"></script>
+    <script type="importmap">
+        {
+        "imports": {
+            "three": "/node_modules/three/build/three.module.js",
+            "three/examples/jsm/": "/node_modules/three/examples/jsm/"
+        }
+        }
+    </script> -->
+
+<script type="module" src="./app.js"></script>
+    <script type="module" src="controls.js"></script>
+
+</body>
+</html>
