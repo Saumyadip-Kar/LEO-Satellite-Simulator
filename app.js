@@ -813,12 +813,32 @@ let satListControl = document.getElementById("satListControl")
 var fetched = false;
 var rawData = null;
 
-
 async function fetchData(max = 20) {
     fetched = false;
     addLog("Fetching TLE data...");
-    const localURL = './celestrak_TLE_dataset.txt';
-        // console.warn('Celestrak unavailable, switching to local dataset...');
+    const localURL = './local_TLE_dataset.txt';
+    const celestrakURL = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle';
+
+    try {
+        //Try online Celestrak first
+        console.log('Fetching TLE data from Celestrak...');
+        const onlineResponse = await fetch(celestrakURL, { cache: 'no-store' });
+
+        if (!onlineResponse.ok) throw new Error('Celestrak fetch failed');
+
+        const onlineData = await onlineResponse.text();
+
+        if (onlineData && onlineData.includes('1 ') && onlineData.includes('2 ')) {
+            console.log('Loaded from Celestrak');
+            rawData = onlineData;
+            parseTLE(onlineData, max);
+            return;
+        } else {
+            throw new Error('Invalid Celestrak data');
+        }
+    } 
+    catch (err) {
+        console.warn('Celestrak unavailable, switching to local dataset...');
         //Fall back to local dataset
         try {
             const localResponse = await fetch(localURL);
@@ -830,10 +850,10 @@ async function fetchData(max = 20) {
             console.log('Loaded from local dataset');
         } 
         catch (localErr) {
-            console.error('Failed to load TLE data:', localErr);
+            console.error('Failed to load both online and local TLE data:', localErr);
+        }
+    }
 }
-}
-
 
 
 function parseTLE(rawData, max = 20) {
